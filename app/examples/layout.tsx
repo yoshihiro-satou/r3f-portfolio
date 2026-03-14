@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "REACT THREE FIBERのサンプル集",
+  title: "Examples",
   description: "AIに相談しながらいろいろと試した作品集です。",
 };
 
