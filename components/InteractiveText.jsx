@@ -54,8 +54,12 @@ export const InteractiveText = ({ children }) => {
   return (
     <Text
       ref={meshRef}
-      fontSize={1}
+      fontSize={3}
+      font="/fonts/PasseroOne-Regular.ttf"
       color="white"
+      anchorX="center"          // ← 横方向のアンカーを中央に（これが重要！）
+      anchorY="middle"          // ← 縦方向も中央にしたい場合（よく使う組み合わせ）
+      textAlign="center"        // ← 複数行時の各行の水平揃えを中央に
       // マウスイベントの登録
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}

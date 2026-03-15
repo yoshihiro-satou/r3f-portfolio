@@ -11,10 +11,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        {children}
-      </body>
-    </html>
+    <>
+      <header>
+        <h1>hone</h1>
+      </header>
+      {children}
+    </>
   );
 }
