@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 
 export const InteractiveText = ({ children }) => {
   const meshRef = useRef()
+  const { viewport } = useThree()
+
+  const textScale = Math.min(viewport.width * 0.28, 3.8)
 
   // 1. マウスが乗っているかどうかを管理するステート
   const [hovered, setHovered] = useState(false)
@@ -54,7 +57,7 @@ export const InteractiveText = ({ children }) => {
   return (
     <Text
       ref={meshRef}
-      fontSize={3}
+      fontSize={textScale}
       font="/fonts/PasseroOne-Regular.ttf"
       color="white"
       anchorX="center"          // ← 横方向のアンカーを中央に（これが重要！）
