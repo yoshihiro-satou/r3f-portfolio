@@ -1,2 +1,5 @@
 @import "tailwindcss";
 
+.font-passero {
+  font-family: var(--font-passero-one), sans-serif;
+}
