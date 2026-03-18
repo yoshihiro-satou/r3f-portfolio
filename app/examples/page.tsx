@@ -1,12 +1,15 @@
-import { CanvasGridFloor } from "@/components/CanvasGridFloor"
+import ListScene from "../ListScene.client"
+import { spaceItems } from "@/lib/items"
+import HtmlOverlay from "@/components/HtmlOverlay"
 
-export default function page() {
+
+export default function SpaceListPage() {
   return (
-    <main className='w-screen h-screen relative bg-[#05050f]'>
-      <CanvasGridFloor />
-      <div className='absolute inset-x-0 bottom-10 z-10 flex justify-self-center pointer-events-none'>
-        
-      </div>
-    </main>
+    <div className="relative w-screen h-screen overflow-hidden bg-black">
+      <ListScene items={spaceItems} />
+
+      {/* HTML重ねレイヤー (Server Componentのまま) */}
+      <HtmlOverlay />
+    </div>
   )
 }

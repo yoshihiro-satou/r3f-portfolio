@@ -5,15 +5,17 @@ export type SpaceItem = {
   type: 'planet' | 'moon' | 'asteroid'
   description: string
   color: string
+  href?: string
 }
 
 export const spaceItems: SpaceItem[] = [
   {
     id: 1,
-    name: "Nebula Core",
+    name: "Pinball",
     type: "planet",
     description: "A glowing gas giant with swirling purple storms",
     color: "#9b5de5",
+    href: "/examples/pinball"
   },
   {
     id: 2,
