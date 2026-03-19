@@ -1,5 +1,12 @@
-export default function ScoreDisplay() {
+'use client'
+interface Props {
+  score: number
+}
+
+export default function ScoreDisplay({ score }: Props) {
   return (
-    <h1 className="text-white text-9xl">world</h1>
+    <div className='absolute top-20 left-4 z-30 text-white text-3xl font-bold tracking-wider drop-shadow-lg'>
+      SCORE: {score}
+    </div>
   )
 }
