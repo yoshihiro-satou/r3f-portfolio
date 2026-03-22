@@ -1,11 +1,10 @@
-import PinballScene from './PinballScene.client'
-import ScoreDisplay from './ScoreDisplay'
+import GameScene from '@/components/pinball/GameScene'
 
-export default function PinballPage() {
+export default function PinballlPage() {
   return (
-    <div className='relative w-screen h-screen overflow-x-hidden bg-gradient-to-b from-indigo-950 to-black'>
-      <PinballScene />
-      <ScoreDisplay />
+    // 画面いっぱいに広がる真っ黒な背景の領域
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#111'}}>
+      <GameScene />
     </div>
   )
 }
