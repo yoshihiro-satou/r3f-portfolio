@@ -5,7 +5,7 @@ export default function HtmlOverlay() {
         Cosmic Arshive
       </h1>
       <p className="text-lg opacity-80 pointer-events-auto bg-black/40 px-6 py-3 rounded-full backdrop-blur-sm">
-        Hover & click floating celestial objects
+        Click and drag to move it.
       </p>
     </div>
   )

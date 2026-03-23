@@ -2,11 +2,9 @@
 
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Environment } from '@react-three/drei'
-import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing'
 
 import { NeonText } from '@/components/NeonText'
 import { HoloPanel } from '@/components/HoloPanel'
-import { MetalTorus } from '@/components/MetalTorus'
 import { CyberGridFloor } from '@/components/CyberGridFloor'
 
 export default function page() {
@@ -19,10 +17,6 @@ export default function page() {
         <color attach="background" args={['#05020f']} />   {/* 深い紫黒でネオンが映える */}
         {/* 環境光 + 反射でメタル感爆上げ */}
         <Environment preset='night' />
-
-        {/* 中央メタルオブジェクト */}
-        <MetalTorus />
-
         {/* ホログラムパネル(複数配置で動きを強調) */}
         <HoloPanel
           position={[-6, 3, 2]}
@@ -39,10 +33,16 @@ export default function page() {
           title="2077"
         />
         <HoloPanel
-          position={[-4, -2, 1]}
+          position={[-4, -2, -8]}
           scale={[2.8, 1.8, 1]}
           color="#aaff00"
           title="HACK"
+        />
+        <HoloPanel
+          position={[0, -2, -8]}
+          scale={[2.8, 1.8, 1]}
+          color="#aaff00"
+          title="Click and drag "
         />
 
         {/* 大きなネオンタイル */}
