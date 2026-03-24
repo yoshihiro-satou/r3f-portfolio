@@ -19,6 +19,7 @@ export default function Top3d() {
           R3F{"\n"}SAMPLES
         </InteractiveText>
         <CyberGridFloor />
+        <ambientLight intensity={0.3} />
       </Canvas>
     </div>
   );

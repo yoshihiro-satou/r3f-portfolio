@@ -27,11 +27,19 @@ export const spaceItems: SpaceItem[] = [
   },
   {
     id: 3,
-    name: "loadindSumple",
+    name: "loadingSumple",
     type: "asteroid",
-    description: "Dark rocky fragment with faint blue veins",
+    description: "ローディングの基礎をとりあえず触ってみた。",
     color: "#3a86ff",
     href: '/examples/loading'
+  },
+  {
+    id: 4,
+    name: "Shader",
+    type: "asteroid",
+    description: "シェーダーの基礎をとりあえず触ってみた。",
+    color: "#3a86ff",
+    href: '/examples/shader'
   },
   // ... 追加したいだけ増やしてください
 ]
