@@ -1,125 +1,108 @@
-"use client";
+"use client"
 
-import { Canvas, useThree } from '@react-three/fiber';
-import { useRef, useMemo, Suspense, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useRef, useMemo, Suspense } from 'react';
 import * as THREE from 'three';
-import { useTexture } from '@react-three/drei';
-import { useControls, Leva } from 'leva'; // ★追加：UIコントローラー
 
 const vertexShader = `
   varying vec2 vUv;
-
   void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vUv = uv;
+  gl_Position = vec4(position, 1.0);
   }
 `;
 
 const fragmentShader = `
-  uniform sampler2D uTexture; // 元の画像
-  uniform sampler2D uNoise;   // ノイズ画像
-  uniform float uDissolve;    // ディゾルブの進行度（0.0 〜 1.0）
-  
+  uniform float uTime;
+  uniform vec2 uResolution;
   varying vec2 vUv;
 
-  void main() {
-    // 1. 元の画像の色を取得
-    vec4 texColor = texture2D(uTexture, vUv);
-    
-    // 2. ノイズ画像から「値」を取得（黒白なのでrチャンネル）
-    float noiseValue = texture2D(uNoise, vUv).r;
-    
-    // 3. ★核心：2つの境界線（ステップ）を作る
-    
-    // 境界線 A（完全に消滅する線）：smoothstep(進行度, 進行度+0.1, ノイズ値)
-    // 進行度(uDissolve)より小さければ消える
-    float dissolveAlpha = smoothstep(uDissolve, uDissolve + 0.1, noiseValue);
-    
-    // 境界線 B（炎の色がつく線）：smoothstep(進行度-0.1, 進行度, ノイズ値)
-    // 消滅する線の少し手前（進行度-0.1）から炎の色にする
-    float edgeFactor = smoothstep(uDissolve - 0.1, uDissolve, noiseValue);
-    
-    // 4. ★炎の色（vec3）を作る
-    vec3 fireColor = vec3(0.0, 0.5, 1.0); // 鮮やかなオレンジ色だ！
-    
-    // 5. ★2枚の画像を「合成」する
-    
-    // mix()関数の魔法！
-    // edgeFactor(炎の線)の値(0.0 〜 1.0) に応じて、元の色と炎の色をブレンドする
-    // uDissolve-0.1 より手前なら元の色、uDissolve に近づくにつれ炎の色になる
-    vec3 finalColor = mix(fireColor, texColor.rgb, edgeFactor);
-    
-    // 6. 最終的な色を出力（消滅のアルファ値を反映させる）
-    gl_FragColor = vec4(finalColor, dissolveAlpha);
+  // 虹色を作るための魔法の関数（パレット）
+  vec3 palette(float t) {
+  vec3 a = vec3(0.5, 0.5, 0.5);
+  vec3 b = vec3(0.5, 0.5, 0.5);
+  vec3 c = vec3(1.0, 1.0, 1.0);
+  vec3 d = vec3(0.263, 0.416, 0.557);
+  return a + b + cos(6.28318 * (c * t + d));
   }
+
+  void main() {
+    //1. レスポンシブ対応：座標を画面全体(0.0)基準、-1.0～1.0の範囲に正規化
+    vec2 uv = (vUv * 2.0 - 1.0);
+    uv.x *= uResolution.x / uResolution.y; // アスペクト比補正
+
+    vec2 uv0 = uv; // 元の座標を保存しておく
+    vec3 finalColor = vec3(0.0);
+
+    // 2. ループを回転して「重なり」と「複雑さ」を出す(4回重ねる)
+    for(float i = 0.0; i < 4.0; i++) {
+    // 万華鏡効果：frachで繰り返し、absで反転させる
+    uv = fract(uv * 1.5) - 0.5;
+
+    // 距離を計算して、時間で動かす
+    float d = length(uv) * exp(-length(uv0));
+
+    vec3 col = palette(length(uv0) + i * 0.4 + uTime * 0.4);
+
+    d = sin(d * 8.0 + uTime) / 8.0;
+    d = abs(d);
+
+    // 光り輝くエッジを作る(0.01を小さくスロとより鋭い光になる)
+    d = pow(0.01 / d, 1.2);
+
+    finalColor += col * d;
+    }
+  gl_FragColor = vec4(finalColor, 1.0);
+}
 `;
-
-function FireEdgeDissolveImage() {
+function PsychedelicBackground() {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const { viewport } = useThree();
+  const { size } = useThree(); // レスポンシブ：現在の画面サイズを取得
 
-  const responsiveScale = Math.min(viewport.width / 4, 1);
-  // useTextureフックで2枚の画像を読み込む
-  const [texture, noise] = useTexture([
-    '/fuji-mountain-japan.jpg', // 元画像
-    '/noise-texture.png',   // ノイズ画像
-  ]);
+  const uniforms = useMemo(() => ({
+    uTime: { value: 0 },
+    uResolution: { value: new THREE.Vector2(size.width, size.height) },
+  }), [size.width, size.height]);
 
-  // ★追加：Levaを使ってUIパネルを作成する
-  // 'FireEdgeFactor' というツマミを作り、0.0〜1.0の間で操作できるようにする
-  const { fireEdgeFactor } = useControls({
-    fireEdgeFactor: { value: 0.0, min: 0.0, max: 1.0, step: 0.01 },
+  useFrame((state) => {
+    if(materialRef.current) {
+      // 毎フレーム時間を進める
+      materialRef.current.uniforms.uTime.value = state.clock.getElapsedTime();
+      // ★レスポンシブ：画面サイズが変わっても追従させる
+      materialRef.current.uniforms.uResolution.value.set(size.width, size.height)
+    }
   });
 
-  // Uniformsの準備
-  const uniforms = useMemo(() => ({
-    uTexture: { value: texture },
-    uNoise: { value: noise },     // ノイズテクスチャ
-    uDissolve: { value: 0.0 },   // 進行度の初期値
-  }), [texture, noise]);
-
-  // Levaの値をUniformsに反映させる（useEffectを使って Reactのタイミングに合わせるぞ！）
-  useEffect(() => {
-    // materialRef.current がちゃんと存在しているか確認してから代入する
-    if (materialRef.current) {
-      materialRef.current.uniforms.uDissolve.value = fireEdgeFactor;
-    }
-  }, [fireEdgeFactor]); 
-
   return (
-    <mesh scale={responsiveScale}>
-      <planeGeometry args={[4, 3, 128, 128]} />
-      {/* ★重要：透明度（alpha）を有効にするために transparent={true} が必須だ！ */}
+    <mesh>
+      {/* 画面いっぱいの板(plane)を作る。２は全画面カバーのサイズ */}
+      <planeGeometry args={[2, 2]} />
       <shaderMaterial
         ref={materialRef}
         vertexShader={vertexShader}
         fragmentShader={fragmentShader}
         uniforms={uniforms}
-        transparent={true} 
+        depthTest={false}
       />
     </mesh>
-  );
+  )
 }
 
-export default function FireEdgeDissolveApp() {
+export default function FullScenePage() {
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-
-      <Leva 
-        oneLineLabels={true} // ラベルを一行にしてスッキリさせる
-        titleBar={{ title: '🔥 Burn Control', drag: true }} // ドラッグ可能にする
-      />
-      
-      {/* もし「もっと下にズラしたい」場合は、CSSのグローバル設定で 
-        .leva-c-kkYvS { top: 100px !important; } のように書く必要があるが、
-        まずは「ドラッグできる設定」にして手動で動かせるようにするのが一番楽だ！
-      */}
-      <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-        {/* 画像の読み込みが完了するまで待機するReactのSuspense */}
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      background: '#000',
+      overflow: 'hidden'
+      }}
+    >
+      <Canvas>
         <Suspense fallback={null}>
-          <FireEdgeDissolveImage />
+          <PsychedelicBackground />
         </Suspense>
       </Canvas>
+
     </div>
-  );
+  )
 }
