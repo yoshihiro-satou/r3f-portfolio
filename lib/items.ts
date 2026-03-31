@@ -35,11 +35,19 @@ export const spaceItems: SpaceItem[] = [
   },
   {
     id: 4,
-    name: "Shader",
+    name: "Shader1",
     type: "asteroid",
-    description: "シェーダーの基礎をとりあえず触ってみた。",
+    description: "シェーダーの基礎をとりあえず触ってみた。万華鏡",
     color: "#3a86ff",
-    href: '/examples/shader'
+    href: '/examples/shader1'
+  },
+  {
+    id: 5,
+    name: "PuzzleGame",
+    type: "asteroid",
+    description: "",
+    color: "#aaff00",
+    href: '/examples/PazzleGame'
   },
   // ... 追加したいだけ増やしてください
 ]
