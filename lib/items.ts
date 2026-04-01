@@ -47,7 +47,7 @@ export const spaceItems: SpaceItem[] = [
     type: "asteroid",
     description: "",
     color: "#aaff00",
-    href: '/examples/PazzleGame'
+    href: '/examples/PuzzleGame'
   },
   // ... 追加したいだけ増やしてください
 ]
