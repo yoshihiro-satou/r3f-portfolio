@@ -43,6 +43,14 @@ export const spaceItems: SpaceItem[] = [
   },
   {
     id: 5,
+    name: "Shader2",
+    type: "asteroid",
+    description: "シェーダーの基礎をとりあえず触ってみた。",
+    color: "#3a86ff",
+    href: '/examples/shader2'
+  },
+  {
+    id: 6,
     name: "PuzzleGame",
     type: "asteroid",
     description: "",
