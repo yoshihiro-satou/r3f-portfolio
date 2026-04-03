@@ -1,19 +1,27 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame, extend } from "@react-three/fiber";
-import { shaderMaterial, Center } from "@react-three/drei";
+import { shaderMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
-// --- カスタムシェーダーの定義 ---
+// --- 1. カラーパレット ---
+const THEMES = [
+  { a: "#050030", b: "#00d4ff", name: "Deep Ocean" },
+  { a: "#20002c", b: "#cbb4d4", name: "Twilight" },
+  { a: "#0f2027", b: "#2c5364", name: "Midnight" },
+  { a: "#134e5e", b: "#71b280", name: "Forest Rain" },
+  { a: "#500000", b: "#ff3e00", name: "Magma" },
+];
+
+// --- 2. カスタムシェーダー ---
 const InteractiveWaveMaterial = shaderMaterial(
   {
     uTime: 0,
-    uMouse: new THREE.Vector2(0, 0),
-    uColorA: new THREE.Color("#050030"), // 深い紺
-    uColorB: new THREE.Color("#00d4ff"), // 明るい青
+    uMouse: new THREE.Vector2(0.5, 0.5), // UV座標 (0.0 ~ 1.0)
+    uColorA: new THREE.Color(THEMES[0].a),
+    uColorB: new THREE.Color(THEMES[0].b),
   },
-  // Vertex Shader: マウス位置に基づいて頂点を持ち上げる
   `
   varying vec2 vUv;
   varying float vElevation;
@@ -24,40 +32,32 @@ const InteractiveWaveMaterial = shaderMaterial(
     vUv = uv;
     vec3 pos = position;
 
-    // 基本的な波の計算
-    float wave = sin(pos.x * 2.0 + uTime) * 0.1;
-    wave += sin(pos.y * 3.0 + uTime * 0.5) * 0.1;
+    // 波の基本計算
+    float wave = sin(pos.x * 3.0 + uTime) * 0.1;
+    wave += sin(pos.y * 2.0 + uTime * 0.8) * 0.1;
 
-    // マウスとの距離を計算（マウスの影響範囲）
+    // マウス位置 (uMouse) と現在の頂点 (uv) の距離
+    // uMouseはメッシュ上の 0.0~1.0 の座標として渡される
     float dist = distance(uv, uMouse);
-    float mouseInfluence = smoothstep(0.4, 0.0, dist); // 0.4の範囲内で影響
+    float mouseInfluence = smoothstep(0.4, 0.0, dist);
     
-    // マウスの近くを盛り上げる
-    pos.z += wave + (mouseInfluence * 0.3);
+    pos.z += wave + (mouseInfluence * 0.8); // 盛り上がりを強調
     
-    vElevation = pos.z; // Fragmentに高さを渡す
-
+    vElevation = pos.z;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
   `,
-  // Fragment Shader: マウスの近くを明るく、高低差で色を変える
   `
   varying vec2 vUv;
   varying float vElevation;
-  uniform float uTime;
-  uniform vec2 uMouse;
   uniform vec3 uColorA;
   uniform vec3 uColorB;
+  uniform vec2 uMouse;
 
   void main() {
-    // マウスからの距離でスポットライト効果
-    float dist = distance(vUv, uMouse);
-    float light = smoothstep(0.5, 0.0, dist);
-
-    // 高さ(vElevation)とスポットライトを組み合わせて色を混ぜる
-    vec3 color = mix(uColorA, uColorB, vElevation * 2.0 + 0.5);
-    color += light * 0.2; // マウスの周りを少し白く光らせる
-
+    vec3 color = mix(uColorA, uColorB, vElevation * 1.5 + 0.3);
+    float light = smoothstep(0.3, 0.0, distance(vUv, uMouse));
+    color += light * 0.3; // マウス位置を光らせる
     gl_FragColor = vec4(color, 1.0);
   }
   `
@@ -65,35 +65,39 @@ const InteractiveWaveMaterial = shaderMaterial(
 
 extend({ InteractiveWaveMaterial });
 
-function BackgroundWave() {
+// --- 3. 背景コンポーネント ---
+function BackgroundWave({ themeIndex }: { themeIndex: number }) {
   const materialRef = useRef<any>();
+  
+  // マウスの目標UV座標を保持するRef（初期値は中央）
+  const mouseUV = useRef(new THREE.Vector2(0.5, 0.5));
+
+  const targetColorA = useMemo(() => new THREE.Color(THEMES[themeIndex].a), [themeIndex]);
+  const targetColorB = useMemo(() => new THREE.Color(THEMES[themeIndex].b), [themeIndex]);
 
   useFrame((state) => {
-    if (materialRef.current) {
-      // 時間の更新
-      materialRef.current.uTime = state.clock.getElapsedTime() * 0.5;
+    if (!materialRef.current) return;
 
-      // マウス座標をシェーダーのUV座標(0.0 ~ 1.0)に変換して渡す
-      // state.mouse は -1 ~ 1 なので変換が必要
-      const targetX = (state.mouse.x + 1) / 2;
-      const targetY = (state.mouse.y + 1) / 2;
+    // 時間更新
+    materialRef.current.uTime = state.clock.getElapsedTime() * 0.5;
 
-      // 線形補間(lerp)でマウスの動きを滑らかにする
-      materialRef.current.uMouse.x = THREE.MathUtils.lerp(
-        materialRef.current.uMouse.x,
-        targetX,
-        0.1
-      );
-      materialRef.current.uMouse.y = THREE.MathUtils.lerp(
-        materialRef.current.uMouse.y,
-        targetY,
-        0.1
-      );
-    }
+    // マウス座標を滑らかに補間 (Lerp)
+    materialRef.current.uMouse.lerp(mouseUV.current, 0.1);
+
+    // 色を滑らかに補間
+    materialRef.current.uColorA.lerp(targetColorA, 0.05);
+    materialRef.current.uColorB.lerp(targetColorB, 0.05);
   });
 
   return (
-    <mesh rotation={[-Math.PI / 3, 0, 0]} scale={[12, 12, 1]}>
+    <mesh 
+      rotation={[-Math.PI / 3, 0, 0]} 
+      scale={[20, 20, 1]}
+      // ★ ここが最重要：メッシュ上でのマウス位置（UV）を直接取得する
+      onPointerMove={(e) => {
+        if (e.uv) mouseUV.current.copy(e.uv);
+      }}
+    >
       <planeGeometry args={[1, 1, 128, 128]} />
       {/* @ts-ignore */}
       <interactiveWaveMaterial ref={materialRef} />
@@ -101,55 +105,49 @@ function BackgroundWave() {
   );
 }
 
-
-// --- メインページコンポーネント ---
+// --- 4. メインページ ---
 export default function ShaderPage() {
+  const [themeIndex, setThemeIndex] = useState(0);
+
   return (
-    <main className="relative h-screen w-full bg-slate-950 overflow-hidden text-white">
-      {/* R3F 背景 */}
+    <main className="relative h-screen w-full bg-slate-950 overflow-hidden text-white font-sans">
       <div className="absolute inset-0 z-0">
-        <Canvas camera={{ position: [0, 0, 4], fov: 50 }}>
-          <BackgroundWave />
+        <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
+          <BackgroundWave themeIndex={themeIndex} />
         </Canvas>
       </div>
 
-      {/* 前面コンテンツ */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center pointer-events-none">
-        <div className="text-center space-y-6 px-4">
-          <h1 className="text-7xl md:text-9xl font-black tracking-tighter mix-blend-screen opacity-90 uppercase">
-            Interact<br />Motion
+      <div className="relative z-10 flex h-full flex-col items-center justify-center pointer-events-none select-none">
+        <div className="text-center space-y-4">
+          <p className="text-cyan-400 font-mono tracking-[0.4em] text-[10px] uppercase animate-pulse">
+            Raycasting Enabled
+          </p>
+          <h1 className="text-7xl md:text-[100px] font-black leading-none tracking-tighter mix-blend-screen opacity-80">
+            SURFACE<br />WAVE
           </h1>
-          
-          <div className="max-w-xl mx-auto space-y-4 pointer-events-auto">
-            <p className="text-blue-300 font-mono tracking-widest text-sm uppercase">
-              Mouse-linked displacement shader
-            </p>
-            <p className="text-gray-400 text-lg leading-relaxed">
-              マウスを動かしてみてください。波の形状と光の反射が、あなたのカーソルを追従します。R3FとGLSLによる低遅延なインタラクション。
-            </p>
-            
-            <div className="pt-8 flex gap-6 justify-center">
-              <button className="group relative px-8 py-3 bg-cyan-500 font-bold rounded-sm transition-all hover:bg-white hover:text-cyan-600">
-                GET STARTED
-                <span className="absolute -bottom-2 -right-2 w-full h-full border border-cyan-500 -z-10 group-hover:bottom-0 group-hover:right-0 transition-all"></span>
-              </button>
-              <button className="px-8 py-3 border border-gray-700 hover:border-white transition-colors">
-                DOCUMENT
-              </button>
-            </div>
-          </div>
+          <p className="text-slate-400 text-sm max-w-xs mx-auto font-light leading-relaxed px-6">
+            プレーン上をなぞってください。波が指先に吸い付くように反応します。
+          </p>
         </div>
 
-        {/* 下部のステータスバー的な装飾 */}
-        <div className="absolute bottom-8 w-full px-12 flex justify-between items-end hidden md:flex">
-          <div className="space-y-1">
-            <div className="h-[1px] w-32 bg-cyan-500/50"></div>
-            <p className="text-[10px] font-mono text-cyan-500/50">SYSTEM READY / STABLE</p>
+        <div className="absolute bottom-12 flex flex-col items-center gap-6 pointer-events-auto">
+          <div className="flex gap-4">
+            {THEMES.map((theme, i) => (
+              <button
+                key={i}
+                onClick={() => setThemeIndex(i)}
+                className={`w-3 h-3 rounded-full transition-all duration-500 ${
+                  i === themeIndex ? 'bg-cyan-400 scale-150 shadow-[0_0_10px_#22d3ee]' : 'bg-white/20'
+                }`}
+              />
+            ))}
           </div>
-          <p className="text-[10px] font-mono text-gray-600">
-            SCROLL TO EXPLORE <br />
-            BASED ON THREE.JS
-          </p>
+          <button 
+            onClick={() => setThemeIndex((themeIndex + 1) % THEMES.length)}
+            className="px-8 py-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full hover:bg-white hover:text-black transition-all text-[10px] font-bold tracking-widest uppercase"
+          >
+            Switch Visuals
+          </button>
         </div>
       </div>
     </main>

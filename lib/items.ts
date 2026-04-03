@@ -54,8 +54,16 @@ export const spaceItems: SpaceItem[] = [
     name: "PuzzleGame",
     type: "asteroid",
     description: "",
-    color: "#aaff00",
+    color: "#9b5de5",
     href: '/examples/PuzzleGame'
+  },
+  {
+    id: 7,
+    name: "Spilling-text",
+    type: "moon",
+    description: "R3Fの独特のテキストの表現を実践してみた。",
+    color:"#aaff00" ,
+    href: "/examples/Spilling-text"
   },
   // ... 追加したいだけ増やしてください
 ]
