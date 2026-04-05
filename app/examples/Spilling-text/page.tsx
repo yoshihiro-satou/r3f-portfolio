@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useEffect, useState, useMemo } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Text3D, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
@@ -15,16 +15,27 @@ type Letter = {
   fontSize: number
 }
 
-// AnimatedLettersコンポーネント（R3F内部で文字を管理）
+// AnimatedLettersコンポーネント
 function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
   const lettersData = useRef<Letter[]>([])
 
-  // 重力・床・アニメーション定数（調整可能）
+  // 重力・床・アニメーション定数
   const gravity = 35
   const bottomY = -1.4
-  const lerpFactor = 0.18 // 元の位置に戻る速度
+  const lerpFactor = 0.18
 
-  // 文字データの初期化（1回だけ実行）
+  // ======================
+  // フォントサイズを16px相当に調整（フルスクリーン基準）
+  // ======================
+  const titleFontSize = 0.04          // ≈16pxに見えるサイズ（h1用に少し大きめ）
+  const descFontSize = 0.025           // ≈16pxに見えるサイズ（p用）
+
+  // 重なり防止のため間隔を十分に広げました（Noto Sans JPの全角文字幅に合わせた最適値）
+  const titleSpacing = 0.12
+  const descSpacing = 0.07
+  const descLineHeight = 0.08
+
+  // 文字データの初期化
   useEffect(() => {
     const data: Letter[] = []
 
@@ -33,8 +44,7 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
     // ======================
     const title = 'タイトル'
     const titleChars = title.split('')
-    const titleY = 1.25
-    const titleSpacing = 0.32
+    const titleY = 1.05
     const titleStartX = -(titleChars.length * titleSpacing) / 2
 
     titleChars.forEach((char, i) => {
@@ -45,42 +55,50 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
         position: new THREE.Vector3(x, titleY, 0),
         velocity: new THREE.Vector3(),
         ref: null,
-        fontSize: 0.28,
+        fontSize: titleFontSize,
       })
     })
 
     // ======================
-    // P説明文部分（1行で配置。長すぎる場合は改行したい場合は後で拡張可能）
+    // P説明文部分（改行対応）
     // ======================
-    const description = 'これは説明文の例です。R3Fで各文字に重力を与えて落下アニメーションを実現します。'
-    const descChars = description.split('')
-    const descY = 0.35
-    const descSpacing = 0.175
-    const descStartX = -(descChars.length * descSpacing) / 2
+    const description = `これは説明文の例です。\nR3Fで各文字に重力を与えて\n落下アニメーションを実現します。`
+    const descLines = description.split('\n')
+    const descY = 0.45
+    let currentY = descY
 
-    descChars.forEach((char, i) => {
-      const x = descStartX + i * descSpacing
-      data.push({
-        char,
-        originalPosition: new THREE.Vector3(x, descY, 0),
-        position: new THREE.Vector3(x, descY, 0),
-        velocity: new THREE.Vector3(),
-        ref: null,
-        fontSize: 0.14,
+    descLines.forEach((line) => {
+      const lineChars = line.split('')
+      if (lineChars.length === 0) return
+
+      const lineStartX = -(lineChars.length * descSpacing) / 2
+
+      lineChars.forEach((char, i) => {
+        const x = lineStartX + i * descSpacing
+        data.push({
+          char,
+          originalPosition: new THREE.Vector3(x, currentY, 0),
+          position: new THREE.Vector3(x, currentY, 0),
+          velocity: new THREE.Vector3(),
+          ref: null,
+          fontSize: descFontSize,
+        })
       })
+
+      currentY -= descLineHeight
     })
 
     lettersData.current = data
   }, [])
 
-  // 落下開始時に各文字に初速を与える（ランダムで自然な散らばり）
+  // 落下開始時に初速を与える
   useEffect(() => {
     if (isFalling && lettersData.current.length > 0) {
       lettersData.current.forEach((letter) => {
         letter.velocity.set(
-          (Math.random() - 0.5) * 5, // 左右に少し散らばる
-          -7 - Math.random() * 5,    // 下方向の初速
-          (Math.random() - 0.5) * 2   // 奥行き方向も少し
+          (Math.random() - 0.5) * 5,
+          -7 - Math.random() * 5,
+          (Math.random() - 0.5) * 2
         )
       })
     }
@@ -92,30 +110,22 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
       if (!letter.ref) return
 
       if (isFalling) {
-        // 重力適用
         letter.velocity.y -= gravity * delta
-
-        // 位置更新（ベクトル演算で正確）
         letter.position.addScaledVector(letter.velocity, delta)
 
-        // カード下部で停止（床）
         if (letter.position.y < bottomY) {
           letter.position.y = bottomY
-          letter.velocity.set(0, 0, 0) // 停止（必要ならバウンド: letter.velocity.y = -letter.velocity.y * 0.3）
+          letter.velocity.set(0, 0, 0)
         }
 
-        // 空気抵抗（徐々に減速）
         letter.velocity.multiplyScalar(0.97)
       } else {
-        // 元の位置へ滑らかに戻る（lerp）
         letter.position.lerp(letter.originalPosition, lerpFactor)
         letter.velocity.set(0, 0, 0)
       }
 
-      // Meshの位置を更新
       letter.ref.position.copy(letter.position)
 
-      // 落下中は少し回転を加えて立体感を出す（オプション）
       if (isFalling) {
         letter.ref.rotation.y = letter.velocity.x * 0.03
         letter.ref.rotation.x = letter.velocity.y * 0.015
@@ -134,15 +144,16 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
             if (mesh) letter.ref = mesh
           }}
           position={letter.originalPosition.toArray()}
-          font="/fonts/helvetiker_regular.typeface.json" // ← ここを日本語対応フォントのパスに変更（後述）
+          font="/fonts/Noto Sans JP_Regular.json"
+          // @ts-expect-error: fontSize is supported by Text3D even if missing in type definitions
           fontSize={letter.fontSize}
           letterSpacing={0}
           lineHeight={1}
           anchorX="center"
           anchorY="middle"
           bevelEnabled
-          bevelThickness={0.015}
-          bevelSize={0.015}
+          bevelThickness={0.008}
+          bevelSize={0.008}
           bevelOffset={0}
           bevelSegments={8}
           curveSegments={12}
@@ -159,30 +170,63 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
 function Scene({ isFalling }: { isFalling: boolean }) {
   return (
     <>
-      {/* 固定カメラ */}
-      <PerspectiveCamera makeDefault position={[0, 0, 6]} />
+      {/* 16px相当になるようfovを50度に固定（視野を調整） */}
+      <PerspectiveCamera makeDefault position={[0, 0, 7]} fov={50} />
 
-      {/* 照明 */}
-      <ambientLight intensity={0.7}/>
+      <ambientLight intensity={0.7} />
       <pointLight position={[10, 10, 10]} intensity={1.2} />
       <pointLight position={[-10, -10, -10]} intensity={0.4} />
 
-      {/* カード背景(白いカード風) */}
+      {/* カード背景（テキストが小さくなったので余白を大きくして見やすいカードに） */}
       <mesh position={[0, 0, -0.12]}>
-        <planeGeometry args={[5.2, 3.6]} />
+        <planeGeometry args={[8.8, 4.3]} />
         <meshStandardMaterial color="#f8f8f8" />
       </mesh>
-
-      {/* カードの影っぽい縁取り(オプションで立体感) */}
       <mesh position={[0, 0, -0.15]}>
-        <planeGeometry args={[5.3, 3.7]} />
+        <planeGeometry args={[8.9, 4.4]} />
         <meshStandardMaterial color="#e5e5e5" />
       </mesh>
 
-      {/* 文字アニメーション */}
       <AnimatedLetters isFalling={isFalling} />
     </>
   )
 }
 
-export default function
+export default function Page() {
+  const [isFalling, setIsFalling] = useState(false)
+
+  return (
+    <div className="relative w-screen h-screen bg-zinc-950 flex items-center justify-center overflow-hidden">
+      <Canvas
+        gl={{ antialias: true, alpha: true }}
+        style={{ width: '100%', height: '100%' }}
+      >
+        <Scene isFalling={isFalling} />
+      </Canvas>
+
+      {/* ボタン */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 z-20">
+        <button
+          onClick={() => setIsFalling((prev) => !prev)}
+          className="px-10 py-5 bg-white hover:bg-zinc-100 active:scale-95 transition-all duration-200 text-zinc-900 font-bold text-2xl rounded-3xl shadow-2xl flex items-center gap-3 border border-zinc-200"
+        >
+          {isFalling ? (
+            <>
+              <span>🔄</span>
+              <span>文字を元に戻す</span>
+            </>
+          ) : (
+            <>
+              <span>↓</span>
+              <span>文字を落とす</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-zinc-400 text-sm font-mono">
+        Next.js + R3F • Noto Sans JP • フォントサイズ16px相当に調整済み
+      </div>
+    </div>
+  )
+}
