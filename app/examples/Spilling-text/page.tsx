@@ -21,7 +21,7 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
 
   // 重力・床・アニメーション定数
   const gravity = 35
-  const bottomY = -1.4
+  const bottomY = -1.9
   const lerpFactor = 0.18
 
   // ======================
@@ -31,7 +31,7 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
   const descFontSize = 0.025           // ≈16pxに見えるサイズ（p用）
 
   // 重なり防止のため間隔を十分に広げました（Noto Sans JPの全角文字幅に合わせた最適値）
-  const titleSpacing = 0.12
+  const titleSpacing = 1.2
   const descSpacing = 0.07
   const descLineHeight = 0.08
 
@@ -62,7 +62,7 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
     // ======================
     // P説明文部分（改行対応）
     // ======================
-    const description = `これは説明文の例です。\nR3Fで各文字に重力を与えて\n落下アニメーションを実現します。`
+    const description = ``
     const descLines = description.split('\n')
     const descY = 0.45
     let currentY = descY
@@ -104,6 +104,9 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
     }
   }, [isFalling])
 
+  const bounceFactor = 0.6; // 跳ね返り係数 (0〜1: 1に近いほどよく跳ねる)
+  const stopThreshold = 0.1; // 停止判定のしきい値
+
   // 毎フレームの物理・アニメーション処理
   useFrame((state, delta) => {
     lettersData.current.forEach((letter) => {
@@ -115,7 +118,11 @@ function AnimatedLetters({ isFalling }: { isFalling: boolean }) {
 
         if (letter.position.y < bottomY) {
           letter.position.y = bottomY
-          letter.velocity.set(0, 0, 0)
+          letter.velocity.y *= -bounceFactor;
+          if(Math.abs(letter.velocity.y) < stopThreshold) {
+            letter.velocity.y = 0;
+          }
+
         }
 
         letter.velocity.multiplyScalar(0.97)
