@@ -65,5 +65,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#aaff00" ,
     href: "/examples/Spilling-text"
   },
+  {
+    id: 8,
+    name: "Scroll-animation",
+    type: "asteroid",
+    description: "R3Fの独特のテキストの表現を実践してみた。",
+    color:"#3a86ff" ,
+    href: "/examples/scroll-animation"
+  },
   // ... 追加したいだけ増やしてください
 ]
