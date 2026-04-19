@@ -1,122 +1,100 @@
 'use client'
 
-import { useRef } from 'react'
-import { useFrame, extend, ThreeEvent } from '@react-three/fiber'
-import { useScroll, shaderMaterial } from '@react-three/drei'
+import { useRef, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useScroll } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Extend ThreeElements for TypeScript
-declare module '@react-three/fiber' {
-  interface ThreeElements {
-    waterShaderMaterial: { ref?: React.Ref<THREE.ShaderMaterial> }
+// 1. シェーダーを文字列として定義（外部ファイルに分けてインポートしてもOKです）
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
-}
+`;
 
-// 1. カスタムシェーダーの定義
-const WaterShaderMaterial = shaderMaterial(
-  {
-    uTime: 0,
-    uScroll: 0,
-    uRippleCenter: new THREE.Vector2(0.5, 0.5),
-    uRippleTime: 0,
-  },
-  // Vertex Shader
-  `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  // Fragment Shader
-  `
-    uniform float uTime;
-    uniform float uScroll;
-    uniform vec2 uRippleCenter;
-    uniform float uRippleTime;
-    varying vec2 vUv;
+const fragmentShader = `
+  uniform float uTime;
+  uniform float uScroll;
+  uniform vec2 uRippleCenter;
+  uniform float uRippleTime;
+  varying vec2 vUv;
 
-    // シンプルなノイズ関数（波の表現用）
-    float random(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+  void main() {
+    vec3 shallowColor = vec3(0.1, 0.6, 0.8);
+    vec3 deepColor = vec3(0.0, 0.05, 0.15);
+    vec3 depthColor = mix(shallowColor, deepColor, uScroll);
 
-    void main() {
-      // スクロールによる水深の色の変化（浅瀬の水色から、深海のダークブルーへ）
-      vec3 shallowColor = vec3(0.1, 0.6, 0.8);
-      vec3 deepColor = vec3(0.0, 0.05, 0.15);
-      vec3 depthColor = mix(shallowColor, deepColor, uScroll);
+    vec2 distortedUv = vUv + vec2(sin(vUv.y * 10.0 + uTime) * 0.02, cos(vUv.x * 10.0 + uTime) * 0.02);
+    
+    float dist = distance(distortedUv, uRippleCenter);
+    float rippleEffect = sin(dist * 50.0 - uRippleTime * 10.0) * exp(-dist * 5.0 - uRippleTime * 2.0);
+    rippleEffect *= step(0.01, uRippleTime); 
 
-      // 時間経過による揺らぎ
-      vec2 distortedUv = vUv + vec2(sin(vUv.y * 10.0 + uTime) * 0.02, cos(vUv.x * 10.0 + uTime) * 0.02);
-      
-      // 波紋の計算
-      float dist = distance(distortedUv, uRippleCenter);
-      float rippleEffect = sin(dist * 50.0 - uRippleTime * 10.0) * exp(-dist * 5.0 - uRippleTime * 2.0);
-      
-      // uRippleTimeが0の時は波紋を消す
-      rippleEffect *= step(0.01, uRippleTime); 
-
-      // 色の合成
-      vec3 finalColor = depthColor + vec3(rippleEffect * 0.2);
-
-      gl_FragColor = vec4(finalColor, 1.0);
-    }
-  `
-)
-
-// R3FのJSXとして使えるようにextend
-extend({ waterShaderMaterial: WaterShaderMaterial })
+    vec3 finalColor = depthColor + vec3(rippleEffect * 0.2);
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+`;
 
 export default function WaterBackground() {
-  const materialRef = useRef<THREE.ShaderMaterial & {
-    uTime: number
-    uScroll: number
-    uRippleCenter: THREE.Vector2
-    uRippleTime: number
-  }>(null)
-  const scrollData = useScroll() // ScrollControlsの子コンポーネントで呼び出す必要あり
+  const materialRef = useRef<THREE.ShaderMaterial>(null)
+  const scrollData = useScroll() 
   
-  // 波紋の状態管理用（useFrame内で書き換えるためReact stateではなくrefを使用）
-  const rippleData = useRef({
-    time: 0,
-    isActive: false,
-  })
+  const rippleData = useRef({ time: 0, isActive: false })
+
+  // 2. useMemoを使ってUniformsを定義 (再レンダリング時のオブジェクト再生成を防ぐ最適化)
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uScroll: { value: 0 },
+      uPointer: { value: new THREE.Vector2() },
+      uRippleCenter: { value: new THREE.Vector2(0.5, 0.5) },
+      uRippleTime: { value: 0 },
+    }),
+    []
+  )
 
   useFrame((state, delta) => {
     if (!materialRef.current) return
 
-    // 1. 時間の更新（デバイスのフレームレートに依存しないようにdeltaを使用 ）
-    materialRef.current.uTime += delta
+    // 3. ネイティブのShaderMaterialでは、値へのアクセスは `.uniforms.[key].value` となります
+    materialRef.current.uniforms.uTime.value += delta
+    materialRef.current.uniforms.uScroll.value = scrollData.offset
 
-    // 2. スクロール進捗（0 〜 1）を取得しシェーダーに渡す
-    materialRef.current.uScroll = scrollData.offset
-
-    // 3. 波紋の進行
     if (rippleData.current.isActive) {
       rippleData.current.time += delta
-      materialRef.current.uRippleTime = rippleData.current.time
-      // 一定時間で波紋をリセット
+      materialRef.current.uniforms.uRippleTime.value = rippleData.current.time
+      
       if (rippleData.current.time > 3.0) {
         rippleData.current.isActive = false
         rippleData.current.time = 0
+        materialRef.current.uniforms.uRippleTime.value = 0
       }
     }
   })
 
-  // ポインタークリック（または移動）で波紋を発生させるハンドラ
-  const handlePointerDown = (e: ThreeEvent<PointerEvent> & { uv: THREE.Vector2 }) => {
+  const handlePointerDown = (e: any) => {
     if (!materialRef.current) return
-    // UV座標を取得して波紋の中心に設定
-    materialRef.current.uRippleCenter.set(e.uv.x, e.uv.y)
+    materialRef.current.uniforms.uRippleCenter.value.set(e.uv.x, e.uv.y)
     rippleData.current.isActive = true
     rippleData.current.time = 0
-    materialRef.current.uRippleTime = 0
+    materialRef.current.uniforms.uRippleTime.value = 0
   }
 
   return (
     <mesh onPointerDown={handlePointerDown}>
+      {/* 画面全体を覆うために少し大きめのプレーンを配置 */}
       <planeGeometry args={[10, 10, 32, 32]} />
-      {/* TypeScriptの型エラーを避けるため any などを適宜設定 */}
-      <waterShaderMaterial ref={materialRef} />
+      
+      {/* 4. extendされたタグではなく、R3FネイティブのshaderMaterialタグを使用 */}
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
+        transparent={true}
+      />
     </mesh>
   )
 }

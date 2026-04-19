@@ -89,5 +89,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#3a86ff" ,
     href: "/examples/scroll-animation3"
   },
+  {
+    id: 10,
+    name: "cyberpunk",
+    type: "moon",
+    description: "R3Fでいろいろ組み合わせてみた。。",
+    color:"#3a86ff" ,
+    href: "/examples/cyberpunk"
+  },
   // ... 追加したいだけ増やしてください
 ]
