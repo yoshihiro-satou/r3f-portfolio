@@ -21,7 +21,7 @@ export function Effects() {
       <Bloom
         luminanceThreshold={0.5}
         mipmapBlur
-        intensity={1.5}
+        intensity={2}
       />
 
       <Glitch
