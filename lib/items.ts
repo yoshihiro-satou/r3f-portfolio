@@ -82,7 +82,7 @@ export const spaceItems: SpaceItem[] = [
     href: "/examples/scroll-animation2"
   },
   {
-    id: 10,
+    id: 11,
     name: "Scroll-animation3",
     type: "moon",
     description: "R3Fのスクロールアニメーションを実践してみた。",
@@ -90,12 +90,20 @@ export const spaceItems: SpaceItem[] = [
     href: "/examples/scroll-animation3"
   },
   {
-    id: 10,
+    id: 12,
     name: "cyberpunk",
     type: "moon",
     description: "R3Fでいろいろ組み合わせてみた。。",
     color:"#3a86ff" ,
     href: "/examples/cyberpunk"
+  },
+  {
+    id: 13,
+    name: "wamodern",
+    type: "asteroid",
+    description: "R3Fでいろいろ組み合わせてみた。。",
+    color:"#9b5de5" ,
+    href: "/examples/wamodern"
   },
   // ... 追加したいだけ増やしてください
 ]
