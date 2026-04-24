@@ -105,5 +105,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#9b5de5" ,
     href: "/examples/wamodern"
   },
+  {
+    id: 14,
+    name: "animation",
+    type: "moon",
+    description: "R3Fでいろいろ組み合わせてみた。。",
+    color:"#3a86ff" ,
+    href: "/examples/animation"
+  },
   // ... 追加したいだけ増やしてください
 ]
