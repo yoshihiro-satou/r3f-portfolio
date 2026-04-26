@@ -113,5 +113,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#3a86ff" ,
     href: "/examples/animation"
   },
+  {
+    id: 15,
+    name: "useFrame",
+    type: "moon",
+    description: "R3Fでいろいろ組み合わせてみた。",
+    color:"#3a86ff" ,
+    href: "/examples/useFrame"
+  },
   // ... 追加したいだけ増やしてください
 ]
