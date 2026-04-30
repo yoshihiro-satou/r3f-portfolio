@@ -129,5 +129,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#3a86ff" ,
     href: "/examples/tunnel"
   },
+  {
+    id: 17,
+    name: "glsl-demo",
+    type: "planet",
+    description: "glslの基礎を触ってみた。",
+    color: "#9b5de5",
+    href: "/examples/glsl-demo"
+  },
   // ... 追加したいだけ増やしてください
 ]
