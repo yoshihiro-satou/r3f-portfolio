@@ -137,5 +137,13 @@ export const spaceItems: SpaceItem[] = [
     color: "#9b5de5",
     href: "/examples/glsl-demo"
   },
+  {
+    id: 18,
+    name: "mouse-shader",
+    type: "moon",
+    description: "R3Fでいろいろ組み合わせてみた。",
+    color:"#3a86ff" ,
+    href: "/examples/mouse-shader"
+  },
   // ... 追加したいだけ増やしてください
 ]
