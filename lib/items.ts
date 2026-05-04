@@ -145,5 +145,13 @@ export const spaceItems: SpaceItem[] = [
     color:"#3a86ff" ,
     href: "/examples/mouse-shader"
   },
+  {
+    id: 19,
+    name: "MeshTransmissionMaterial",
+    type: "asteroid",
+    description: "R3Fのスクロールアニメーションを実践してみた。",
+    color:"#3a86ff" ,
+    href: "/examples/MeshTransmissionMaterial"
+  },
   // ... 追加したいだけ増やしてください
 ]
